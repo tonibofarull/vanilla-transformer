@@ -8,15 +8,15 @@ Implementation of a Vanilla Transformer
 In training:
 
 input of encoder: hello my name is toni
-input of decoder: <sos> hola me llamo toni
-target of decoder: hola me llamo toni <eos>
+input of decoder: <s> hola me llamo toni
+target of decoder: hola me llamo toni </s>
 
 In inference
 1r/
-input of decoder: <sos>
+input of decoder: <s>
 output of decoder: hola
 2n/
-input of decoder: <sos> hola
+input of decoder: <s> hola
 output of decoder: hola me
 ...
 """
@@ -24,7 +24,7 @@ output of decoder: hola me
 import torch
 import torch.nn.functional as F
 from torch import nn
-from modules import MultiHeadAttention, PositionalEncoding, Embedding
+from .modules import MultiHeadAttention, PositionalEncoding, Embedding
 
 
 class Encoder(nn.Module):
@@ -68,20 +68,21 @@ class Decoder(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self, Nx=6):
+    def __init__(self, dim_out=10, Nx=1):
         super().__init__()
-        self.embedding = Embedding()
+        self.embedding_src = Embedding(13711, 64)
+        self.embedding_tgt = Embedding(18114, 64)
         self.pe = PositionalEncoding()
         self.encs = nn.ModuleList([Encoder() for _ in range(Nx)])
         self.decs = nn.ModuleList([Decoder() for _ in range(Nx)])
-        self.fc1 = nn.Linear(64, 10)
+        self.fc1 = nn.Linear(64, dim_out)
 
     def forward(self, inp, out):
-        inp = self.pe(self.embedding(inp))
+        inp = self.pe(self.embedding_src(inp))
         for enc in self.encs:
             inp = enc(inp)
 
-        out = self.pe(self.embedding(out))
+        out = self.pe(self.embedding_tgt(out))
         for dec in self.decs:
             out = dec(inp, out)
 
