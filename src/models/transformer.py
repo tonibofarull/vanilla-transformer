@@ -11,14 +11,14 @@ from .modules import MultiHeadAttention, PositionalEncoding, Embedding
 
 
 class Encoder(nn.Module):
-    def __init__(self, d_model):
+    def __init__(self, d_model, d_ff, drop_p):
         super().__init__()
         self.mha = MultiHeadAttention(is_mask=False, d_model=d_model)
-        self.drop1 = nn.Dropout(0)
+        self.drop1 = nn.Dropout(drop_p)
         self.add_norm1 = nn.LayerNorm(d_model)
-        self.fc1 = nn.Linear(d_model, 2048)
-        self.fc2 = nn.Linear(2048, d_model)
-        self.drop2 = nn.Dropout(0)
+        self.fc1 = nn.Linear(d_model, d_ff)
+        self.fc2 = nn.Linear(d_ff, d_model)
+        self.drop2 = nn.Dropout(drop_p)
         self.add_norm2 = nn.LayerNorm(d_model)
 
     def forward(self, X, pad):
@@ -34,17 +34,17 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, d_model):
+    def __init__(self, d_model, d_ff, drop_p):
         super().__init__()
         self.mha1 = MultiHeadAttention(is_mask=True, d_model=d_model)
-        self.drop1 = nn.Dropout(0)
+        self.drop1 = nn.Dropout(drop_p)
         self.add_norm1 = nn.LayerNorm(d_model)
         self.mha2 = MultiHeadAttention(is_mask=True, d_model=d_model)
-        self.drop2 = nn.Dropout(0)
+        self.drop2 = nn.Dropout(drop_p)
         self.add_norm2 = nn.LayerNorm(d_model)
-        self.fc1 = nn.Linear(d_model, 2048)
-        self.fc2 = nn.Linear(2048, d_model)
-        self.drop3 = nn.Dropout(0)
+        self.fc1 = nn.Linear(d_model, d_ff)
+        self.fc2 = nn.Linear(d_ff, d_model)
+        self.drop3 = nn.Dropout(drop_p)
         self.add_norm3 = nn.LayerNorm(d_model)
 
     def forward(self, X, Y, pad):
@@ -64,16 +64,15 @@ class Decoder(nn.Module):
 
 
 class Transformer(nn.Module):
-    # def __init__(self, voc_src=13711, voc_tgt=18114, d_model=128, Nx=4):
-    def __init__(self, voc_src=8, voc_tgt=7, d_model=128, Nx=6):
+    def __init__(self, voc_src, voc_tgt, d_model=128, d_ff=2048, drop_p=0, Nx=6):
         super().__init__()
         self.embedding_src = Embedding(voc_src, d_model)
-        self.drop1 = nn.Dropout(0)
+        self.drop1 = nn.Dropout(drop_p)
         self.embedding_tgt = Embedding(voc_tgt, d_model)
-        self.drop2 = nn.Dropout(0)
+        self.drop2 = nn.Dropout(drop_p)
         self.pe = PositionalEncoding(d_model)
-        self.encs = nn.ModuleList([Encoder(d_model) for _ in range(Nx)])
-        self.decs = nn.ModuleList([Decoder(d_model) for _ in range(Nx)])
+        self.encs = nn.ModuleList([Encoder(d_model, d_ff, drop_p) for _ in range(Nx)])
+        self.decs = nn.ModuleList([Decoder(d_model, d_ff, drop_p) for _ in range(Nx)])
         self.fc = nn.Linear(d_model, voc_tgt)
 
     def forward(self, inp, out, inp_pad, out_pad):
@@ -87,7 +86,7 @@ class Transformer(nn.Module):
         inp = self.drop1(inp)
         for enc in self.encs:
             inp = enc(inp, inp_pad)
-        
+
         # Decoder
         out = self.embedding_tgt(out)  # (N, L, d_model)
         out = self.pe(out)

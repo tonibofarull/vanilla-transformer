@@ -4,7 +4,7 @@ import spacy
 from torch.utils.data import Dataset
 
 
-class EnglishToSpanish(Dataset):
+class EnglishSpanish(Dataset):
 
     MAX_LEN = 16
 
@@ -19,12 +19,8 @@ class EnglishToSpanish(Dataset):
         self.load_data()
 
     def load_data(self):
-        corpus_src = self._get_tokenization(
-            "../data/sample_esp.txt", self._tokenize_es
-        )
-        corpus_tgt = self._get_tokenization(
-            "../data/sample_eng.txt", self._tokenize_en
-        )
+        corpus_src = self._get_tokenization("../data/sample_esp.txt", self._tokenize_es)
+        corpus_tgt = self._get_tokenization("../data/sample_eng.txt", self._tokenize_en)
         # corpus_src = self._get_tokenization(
         #     "../data/gc_2010-2017_conglomerated_20171009_en.txt", self._tokenize_en
         # )
@@ -39,19 +35,35 @@ class EnglishToSpanish(Dataset):
 
         self.corpus_pre = []
         for elem_src, elem_tgt in corpus:
-            inp_pad = self.MAX_LEN - len(elem_src) + 1 # +1 because we are adding <SOS> or <EOS> in target
+            inp_pad = (
+                self.MAX_LEN - len(elem_src) + 1
+            )  # +1 because we are adding <SOS> or <EOS> in target
             out_pad = self.MAX_LEN - len(elem_tgt)
             elem_src += [self.PADDING] * inp_pad
             elem_tgt += [self.PADDING] * out_pad
             self.corpus_pre.append((elem_src, elem_tgt, inp_pad, out_pad))
 
         # TODO: improve, placeholder to see if it works
-        self.voc_src = self.SPECIAL_TOKENS + list(set(x for elem in (elem for elem, _, _, _ in self.corpus_pre) for x in elem if x not in self.SPECIAL_TOKENS))
+        self.voc_src = self.SPECIAL_TOKENS + list(
+            set(
+                x
+                for elem in (elem for elem, _, _, _ in self.corpus_pre)
+                for x in elem
+                if x not in self.SPECIAL_TOKENS
+            )
+        )
         self.voc_src_map = {voc: i for i, voc in enumerate(self.voc_src)}
 
-        self.voc_tgt = self.SPECIAL_TOKENS + list(set(x for elem in (elem for _, elem, _, _ in self.corpus_pre) for x in elem if x not in self.SPECIAL_TOKENS))
+        self.voc_tgt = self.SPECIAL_TOKENS + list(
+            set(
+                x
+                for elem in (elem for _, elem, _, _ in self.corpus_pre)
+                for x in elem
+                if x not in self.SPECIAL_TOKENS
+            )
+        )
         self.voc_tgt_map = {voc: i for i, voc in enumerate(self.voc_tgt)}
-        
+
         self.sos = self._token_to_idx([self.START_OF_SENTENCE], False).unsqueeze(1)
         self.eos = self._token_to_idx([self.END_OF_SENTENCE], False).unsqueeze(1)
         self.pad = self._token_to_idx([self.PADDING], False).unsqueeze(1)
@@ -99,4 +111,11 @@ class EnglishToSpanish(Dataset):
 
     def __getitem__(self, idx):
         elem_src, elem_tgt, inp_pad, out_pad = self.corpus_pre[idx]
-        return self._token_to_idx(elem_src), self._token_to_idx(elem_tgt, False), inp_pad, out_pad, elem_src, elem_tgt
+        return (
+            self._token_to_idx(elem_src),
+            self._token_to_idx(elem_tgt, False),
+            inp_pad,
+            out_pad,
+            elem_src,
+            elem_tgt,
+        )

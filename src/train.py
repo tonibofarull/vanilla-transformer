@@ -6,6 +6,7 @@ from torch import optim
 from torch.utils.data import DataLoader
 import numpy as np
 
+
 def compute_and_loss(model, inp, out, inp_pad, out_pad, data):
     # sos and eos shape: (1, 1)
     c_sos = torch.repeat_interleave(data.sos, out.shape[0], 0)
@@ -15,31 +16,34 @@ def compute_and_loss(model, inp, out, inp_pad, out_pad, data):
     # out shape: (N, 16) => out1 and out2 shape (N, 17)
     out1 = torch.cat([c_sos, out], 1)
     real = torch.cat([out, c_pad], 1)
-    real[range(len(out_pad)), -(out_pad+1)] = data.eos
+    real[range(len(out_pad)), -(out_pad + 1)] = data.eos
     real = F.one_hot(real, num_classes=data.voc_tgt_len).float()
 
     pred = model(inp, out1, inp_pad, out_pad)
     r = 0
     for i in range(real.shape[0]):
         scale = real.shape[1] - out_pad[i]
-        r_oe = real[i, :-out_pad[i]]
-        p_oe = pred[i, :-out_pad[i]]
+        r_oe = real[i, :scale]
+        p_oe = pred[i, :scale]
         # bithack to apply softlabeling
-        # max_p = 0.99
-        # r_oe = r_oe * max_p + (1-r_oe) * (1-max_p) / r_oe.shape[1]
+        max_p = 0.99
+        r_oe = r_oe * max_p + (1 - r_oe) * (1 - max_p) / r_oe.shape[1]
         r += F.binary_cross_entropy(p_oe, r_oe) / scale
     return r
 
 
 class Trainer:
-    def __init__(self):
-        self.iters = 30
-        self.verbose = True
+    def __init__(self, iters=2, verbose=True, batch_size=64, lr=0.0001, shuffle=True):
+        self.iters = iters
+        self.verbose = verbose
+        self.batch_size = batch_size
+        self.lr = lr
+        self.shuffle = shuffle
 
     def fit(self, model, data):
         # Datasets and optimizer
-        trainloader = DataLoader(data, batch_size=1, shuffle=True)
-        optimizer = optim.Adam(model.parameters(), lr=0.0001)
+        trainloader = DataLoader(data, batch_size=self.batch_size, shuffle=self.shuffle)
+        optimizer = optim.Adam(model.parameters(), lr=self.lr)
         # Training loop
         tini = time.time()
         train_losses, valid_losses = [], []
@@ -62,6 +66,8 @@ class Trainer:
             if self.verbose:
                 print(f"EPOCH {epoch} train loss: {train_running_loss}")
                 print()
+
+            torch.save(model.state_dict(), "mod_checkpoint.pth")
 
         # Final update of the model
         if self.verbose:

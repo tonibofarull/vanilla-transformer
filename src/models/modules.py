@@ -54,7 +54,6 @@ class MultiHeadAttention(nn.Module):
     def __init__(self, is_mask, d_model, h=8):
         super().__init__()
         self.is_mask = is_mask
-        self.h = h
 
         d = d_model // h
         self.fc_q = nn.ModuleList([nn.Linear(d_model, d, bias=False) for _ in range(h)])
@@ -65,6 +64,8 @@ class MultiHeadAttention(nn.Module):
     def forward(self, Q, K, V, pad):
         """
         Multi-Head Attention: Section 3.2.2
+
+        :param pad: list containing pading of each element
         """
         Qs = [proj(Q) for proj in self.fc_q]
         Ks = [proj(K) for proj in self.fc_k]
@@ -80,8 +81,6 @@ class MultiHeadAttention(nn.Module):
         """
         QK = torch.matmul(Q, K.transpose(-1, -2)) / np.sqrt(K.shape[1])
         M = torch.zeros(QK.shape)
-        if type(pad) == int:
-            pad = [pad]
         for i, x in enumerate(pad):
             M[i, :, -x:] = 1
         if self.is_mask:  # block to see future elements
