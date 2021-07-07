@@ -53,28 +53,42 @@ class MultiHeadAttention(nn.Module):
     TODO: proper masking
     """
 
-    def __init__(self, d_model=64, h=8, mask=True):
+    def __init__(self, is_mask, d_model, h=8):
         super().__init__()
+        self.is_mask = is_mask
         self.h = h
-        self.mask = mask
-        # d = d_model // h
-        # self.fc_q = nn.ModuleList([nn.Linear(d, d) for _ in range(h)])
-        # self.fc_k = nn.ModuleList([nn.Linear(d, d) for _ in range(h)])
-        # self.fc_v = nn.ModuleList([nn.Linear(d, d) for _ in range(h)])
-        # self.fc = nn.Linear(d_model, d_model)
 
-    def forward(self, Q, K, V):
-        return self._SDA(Q, K, V)
+        d = d_model // h
+        self.fc_q = nn.ModuleList([nn.Linear(d_model, d, bias=False) for _ in range(h)])
+        self.fc_k = nn.ModuleList([nn.Linear(d_model, d, bias=False) for _ in range(h)])
+        self.fc_v = nn.ModuleList([nn.Linear(d_model, d, bias=False) for _ in range(h)])
+        self.fc = nn.Linear(d_model, d_model)
 
-    def _SDA(self, Q, K, V):
+    def forward(self, Q, K, V, pad):
+        Qs = [proj(Q) for proj in self.fc_q]
+        Ks = [proj(K) for proj in self.fc_k]
+        Vs = [proj(V) for proj in self.fc_v]
+        X = [self._SDA(Q, K, V, pad) for Q, K, V in zip(Qs, Ks, Vs)]
+        X = torch.cat(X, dim=-1)
+        X = self.fc(X)
+        return X
+
+    def _SDA(self, Q, K, V, pad):
         """
         Scaled Dot-Product Attention: Section 3.2.1
         """
         QK = torch.matmul(Q, K.transpose(-1, -2)) / np.sqrt(K.shape[1])
-        if self.mask:  # block to see future elements
-            mask = torch.ones((QK.shape[1], QK.shape[2]))
-            mask = torch.triu(mask, diagonal=1)
-            QK += mask * (-1e9)
+        M = torch.zeros(QK.shape)
+        if type(pad) == int:
+            pad = [pad]
+        for i, x in enumerate(pad):
+            M[i, :, -x:] = 1
+        if self.is_mask:  # block to see future elements
+            future_M = torch.ones((QK.shape[1], QK.shape[2]))
+            future_M = torch.triu(future_M, diagonal=1)
+            M = torch.maximum(M, future_M)
+        # mask shape: (L, d_model)
+        QK += M * (-1e9)
         att = F.softmax(QK, dim=-1)
         X = torch.matmul(att, V)
         return X

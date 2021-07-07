@@ -20,11 +20,17 @@ class EnglishToSpanish(Dataset):
 
     def load_data(self):
         corpus_src = self._get_tokenization(
-            "../data/gc_2010-2017_conglomerated_20171009_en.txt", self._tokenize_en
+            "../data/sample_eng.txt", self._tokenize_en
         )
         corpus_tgt = self._get_tokenization(
-            "../data/gc_2010-2017_conglomerated_20171009_es.txt", self._tokenize_es
+            "../data/sample_esp.txt", self._tokenize_es
         )
+        # corpus_src = self._get_tokenization(
+        #     "../data/gc_2010-2017_conglomerated_20171009_en.txt", self._tokenize_en
+        # )
+        # corpus_tgt = self._get_tokenization(
+        #     "../data/gc_2010-2017_conglomerated_20171009_es.txt", self._tokenize_es
+        # )
 
         corpus = list(zip(corpus_src, corpus_tgt))
         lens = np.array([(len(obs_src), len(obs_tgt)) for obs_src, obs_tgt in corpus])
@@ -33,20 +39,26 @@ class EnglishToSpanish(Dataset):
 
         self.corpus_pre = []
         for elem_src, elem_tgt in corpus:
-            elem_src += [self.PADDING] * (self.MAX_LEN - len(elem_src) + 1) # +1 because we are adding <SOS> or <EOS> in target
-            elem_tgt += [self.PADDING] * (self.MAX_LEN - len(elem_tgt))
-            self.corpus_pre.append((elem_src, elem_tgt))
+            inp_pad = self.MAX_LEN - len(elem_src) + 1 # +1 because we are adding <SOS> or <EOS> in target
+            out_pad = self.MAX_LEN - len(elem_tgt)
+            elem_src += [self.PADDING] * inp_pad
+            elem_tgt += [self.PADDING] * out_pad
+            self.corpus_pre.append((elem_src, elem_tgt, inp_pad, out_pad))
 
         # TODO: improve, placeholder to see if it works
-        self.voc_en = self.SPECIAL_TOKENS + list(set(x for elem in (elem for elem, _ in self.corpus_pre) for x in elem if x not in self.SPECIAL_TOKENS))
+        self.voc_en = self.SPECIAL_TOKENS + list(set(x for elem in (elem for elem, _, _, _ in self.corpus_pre) for x in elem if x not in self.SPECIAL_TOKENS))
         self.voc_en_map = {voc: i for i, voc in enumerate(self.voc_en)}
 
-        self.voc_es = self.SPECIAL_TOKENS + list(set(x for elem in (elem for _, elem in self.corpus_pre) for x in elem if x not in self.SPECIAL_TOKENS))
+        self.voc_es = self.SPECIAL_TOKENS + list(set(x for elem in (elem for _, elem, _, _ in self.corpus_pre) for x in elem if x not in self.SPECIAL_TOKENS))
         self.voc_es_map = {voc: i for i, voc in enumerate(self.voc_es)}
         
         self.sos = self._token_to_idx([self.START_OF_SENTENCE], False).unsqueeze(1)
         self.eos = self._token_to_idx([self.END_OF_SENTENCE], False).unsqueeze(1)
 
+        self.voc_src_len = len(self.voc_en_map)
+        self.voc_tgt_len = len(self.voc_es_map)
+        print("Corpus eng:", self.voc_src_len)
+        print("Corpus esp:", self.voc_tgt_len)
 
     def _get_tokenization(self, file_pth, tokenizer):
         with open(file_pth, "r", encoding="utf8") as f:
@@ -85,5 +97,5 @@ class EnglishToSpanish(Dataset):
         return len(self.corpus_pre)
 
     def __getitem__(self, idx):
-        elem_src, elem_tgt = self.corpus_pre[idx]
-        return self._token_to_idx(elem_src), self._token_to_idx(elem_tgt, False), elem_src, elem_tgt
+        elem_src, elem_tgt, inp_pad, out_pad = self.corpus_pre[idx]
+        return self._token_to_idx(elem_src), self._token_to_idx(elem_tgt, False), inp_pad, out_pad, elem_src, elem_tgt

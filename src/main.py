@@ -9,13 +9,13 @@ from torch.utils.data import DataLoader
 
 def main():
     trainer = Trainer()
-    tm = Transformer()
+    tm = Transformer(d_model=16)
     data = EnglishToSpanish()
     dl = iter(DataLoader(data))
 
-    # trainer.fit(tm, data)
+    trainer.fit(tm, data)
 
-    inp, out, src, tgt = next(dl)
+    inp, out, inp_pad, out_pad, src, tgt = next(dl)
     sos = torch.repeat_interleave(data.sos, 1, 0)
     out1 = torch.cat([sos], 1)
     R = tm(inp, out1)

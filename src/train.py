@@ -4,9 +4,11 @@ import torch
 from torch.nn import functional as F
 from torch import optim
 from torch.utils.data import DataLoader
+import numpy as np
 
-
-def compute_and_loss(model, inp, out, sos, eos):
+def compute_and_loss(model, inp, out, inp_pad, out_pad, data):
+    sos = data.sos
+    eos = data.eos
     # sos and eos shape: (1, 1)
     sos = torch.repeat_interleave(sos, out.shape[0], 0)
     eos = torch.repeat_interleave(eos, out.shape[0], 0)
@@ -18,19 +20,25 @@ def compute_and_loss(model, inp, out, sos, eos):
 
     # pred shape: (N, L, 18114)
     # For each position L the probabilities of all possible tokens
-    pred = model(inp, out1)
-    pred = pred.reshape(-1, 18114)
     real = out2.reshape(-1)
-    return F.cross_entropy(pred, real)
+    useful_pos = np.where(real != 2)
+    real = real[useful_pos]
+    real = F.one_hot(real, num_classes=data.voc_tgt_len).float()
+    # real[real == 1] = 0.9
+    # real[real == 0] = 0.1/data.voc_tgt_len
+    pred = model(inp, out1, inp_pad, out_pad)
+    pred = pred.reshape(-1, data.voc_tgt_len)
+    pred = pred[useful_pos]
+    return F.binary_cross_entropy(pred, real)
 
 class Trainer:
     def __init__(self):
-        self.iters = 1
+        self.iters = 20
         self.verbose = True
 
     def fit(self, model, data):
         # Datasets and optimizer
-        trainloader = DataLoader(data, batch_size=64, shuffle=True)
+        trainloader = DataLoader(data, batch_size=1, shuffle=True)
         optimizer = optim.Adam(model.parameters())
         # Training loop
         tini = time.time()
@@ -41,8 +49,8 @@ class Trainer:
             model.train()
             for i, batch in enumerate(trainloader):
                 optimizer.zero_grad()
-                inp, out, _, _ = batch
-                train_loss = compute_and_loss(model, inp, out, data.sos, data.eos)
+                inp, out, inp_pad, out_pad, _, _ = batch
+                train_loss = compute_and_loss(model, inp, out, inp_pad, out_pad, data)
                 train_loss.backward()
                 optimizer.step()
 
