@@ -6,6 +6,7 @@ from torch import optim
 from torch.utils.data import DataLoader
 import numpy as np
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def compute_and_loss(model, inp, out, inp_pad, out_pad, data):
     # sos and eos shape: (1, 1)
@@ -19,7 +20,7 @@ def compute_and_loss(model, inp, out, inp_pad, out_pad, data):
     real[range(len(out_pad)), -(out_pad + 1)] = data.eos
     real = F.one_hot(real, num_classes=data.voc_tgt_len).float()
 
-    pred = model(inp, out1, inp_pad, out_pad)
+    pred = model(inp.to(device), out1.to(device), inp_pad, out_pad)
     r = 0
     for i in range(real.shape[0]):
         scale = real.shape[1] - out_pad[i]
@@ -28,12 +29,12 @@ def compute_and_loss(model, inp, out, inp_pad, out_pad, data):
         # bithack to apply softlabeling
         max_p = 0.99
         r_oe = r_oe * max_p + (1 - r_oe) * (1 - max_p) / r_oe.shape[1]
-        r += F.binary_cross_entropy(p_oe, r_oe) / scale
+        r += F.binary_cross_entropy(p_oe.to(device), r_oe.to(device)) / scale
     return r
 
 
 class Trainer:
-    def __init__(self, iters=2, verbose=True, batch_size=64, lr=0.0001, shuffle=True):
+    def __init__(self, iters=2, verbose=True, batch_size=128, lr=0.0001, shuffle=True):
         self.iters = iters
         self.verbose = verbose
         self.batch_size = batch_size

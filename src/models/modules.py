@@ -3,6 +3,7 @@ import torch.nn.functional as F
 from torch import nn
 import numpy as np
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class Embedding(nn.Module):
     """
@@ -80,11 +81,11 @@ class MultiHeadAttention(nn.Module):
         Scaled Dot-Product Attention: Section 3.2.1
         """
         QK = torch.matmul(Q, K.transpose(-1, -2)) / np.sqrt(K.shape[1])
-        M = torch.zeros(QK.shape)
+        M = torch.zeros(QK.shape).to(device)
         for i, x in enumerate(pad):
             M[i, :, -x:] = 1
         if self.is_mask:  # block to see future elements
-            future_M = torch.ones((QK.shape[1], QK.shape[2]))
+            future_M = torch.ones((QK.shape[1], QK.shape[2])).to(device)
             future_M = torch.triu(future_M, diagonal=1)
             M = torch.maximum(M, future_M)
         # mask shape: (L, d_model)

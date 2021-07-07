@@ -64,7 +64,7 @@ class Decoder(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self, voc_src, voc_tgt, d_model=128, d_ff=2048, drop_p=0, Nx=6):
+    def __init__(self, voc_src, voc_tgt, d_model=128, d_ff=2048, drop_p=0.1, Nx=6):
         super().__init__()
         self.embedding_src = Embedding(voc_src, d_model)
         self.drop1 = nn.Dropout(drop_p)

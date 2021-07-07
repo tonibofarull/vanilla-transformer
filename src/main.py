@@ -5,7 +5,7 @@ from dataloader import EnglishSpanish
 from train import Trainer
 
 PICK_TOP = 0
-
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def inference(model, inp, inp_pad, data):
     model.eval()
@@ -15,10 +15,10 @@ def inference(model, inp, inp_pad, data):
     print(data._idx_to_token(out1))
     print()
     for _ in range(data.MAX_LEN * 2):
-        R = model(inp, out1, inp_pad, [0])
+        R = model(inp.to(device), out1.to(device), inp_pad, [0])
         last_pred = R[0, -1]
         values, indices = torch.topk(last_pred, k=5)
-        probs = values.detach().numpy()
+        probs = values.cpu().detach().numpy()
         r = torch.tensor([indices[PICK_TOP]])
         out1 = torch.cat([out1, r.reshape(1, 1)], 1)
         print("Top best values:")
@@ -35,8 +35,10 @@ def inference(model, inp, inp_pad, data):
 def main():
     data = EnglishSpanish()
     model = Transformer(data.voc_src_len, data.voc_tgt_len)
-    trainer = Trainer(iters=20)
+    trainer = Trainer(iters=4)
 
+    #model.load_state_dict(torch.load("mod_checkpoint.pth"))
+    model.to(device)
     trainer.fit(model, data)
     print()
 
