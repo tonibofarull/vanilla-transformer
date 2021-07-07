@@ -7,39 +7,39 @@ from torch.utils.data import DataLoader
 import numpy as np
 
 def compute_and_loss(model, inp, out, inp_pad, out_pad, data):
-    sos = data.sos
-    eos = data.eos
     # sos and eos shape: (1, 1)
-    sos = torch.repeat_interleave(sos, out.shape[0], 0)
-    eos = torch.repeat_interleave(eos, out.shape[0], 0)
+    c_sos = torch.repeat_interleave(data.sos, out.shape[0], 0)
+    c_pad = torch.repeat_interleave(data.pad, out.shape[0], 0)
     # sos and eos with shape (N, 1) and same value at every position
     # Add sos and eos to create input and output of decoder
     # out shape: (N, 16) => out1 and out2 shape (N, 17)
-    out1 = torch.cat([sos, out], 1)
-    out2 = torch.cat([out, eos], 1)
-
-    # pred shape: (N, L, 18114)
-    # For each position L the probabilities of all possible tokens
-    real = out2.reshape(-1)
-    useful_pos = np.where(real != 2)
-    real = real[useful_pos]
+    out1 = torch.cat([c_sos, out], 1)
+    real = torch.cat([out, c_pad], 1)
+    real[range(len(out_pad)), -(out_pad+1)] = data.eos
     real = F.one_hot(real, num_classes=data.voc_tgt_len).float()
-    # real[real == 1] = 0.9
-    # real[real == 0] = 0.1/data.voc_tgt_len
+
     pred = model(inp, out1, inp_pad, out_pad)
-    pred = pred.reshape(-1, data.voc_tgt_len)
-    pred = pred[useful_pos]
-    return F.binary_cross_entropy(pred, real)
+    r = 0
+    for i in range(real.shape[0]):
+        scale = real.shape[1] - out_pad[i]
+        r_oe = real[i, :-out_pad[i]]
+        p_oe = pred[i, :-out_pad[i]]
+        # bithack to apply softlabeling
+        # max_p = 0.99
+        # r_oe = r_oe * max_p + (1-r_oe) * (1-max_p) / r_oe.shape[1]
+        r += F.binary_cross_entropy(p_oe, r_oe) / scale
+    return r
+
 
 class Trainer:
     def __init__(self):
-        self.iters = 20
+        self.iters = 30
         self.verbose = True
 
     def fit(self, model, data):
         # Datasets and optimizer
         trainloader = DataLoader(data, batch_size=1, shuffle=True)
-        optimizer = optim.Adam(model.parameters())
+        optimizer = optim.Adam(model.parameters(), lr=0.0001)
         # Training loop
         tini = time.time()
         train_losses, valid_losses = [], []

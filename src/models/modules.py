@@ -48,9 +48,7 @@ class PositionalEncoding(nn.Module):
 
 class MultiHeadAttention(nn.Module):
     """
-    Section 3.2.2 from original paper
-    TODO: We are using singlehead attention right now. DO: MULTIHEAD
-    TODO: proper masking
+    Attention layer and Multi-Head Attention
     """
 
     def __init__(self, is_mask, d_model, h=8):
@@ -65,6 +63,9 @@ class MultiHeadAttention(nn.Module):
         self.fc = nn.Linear(d_model, d_model)
 
     def forward(self, Q, K, V, pad):
+        """
+        Multi-Head Attention: Section 3.2.2
+        """
         Qs = [proj(Q) for proj in self.fc_q]
         Ks = [proj(K) for proj in self.fc_k]
         Vs = [proj(V) for proj in self.fc_v]
