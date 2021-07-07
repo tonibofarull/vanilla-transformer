@@ -1,7 +1,8 @@
 import torch
 from torch.utils.data import DataLoader
+import yaml
 from models.transformer import Transformer
-from dataloader import EnglishSpanish
+from dataloader import SourceTargetDataset
 from train import Trainer
 
 PICK_TOP = 0
@@ -33,12 +34,15 @@ def inference(model, inp, inp_pad, data):
 
 
 def main():
-    data = EnglishSpanish()
-    model = Transformer(data.voc_src_len, data.voc_tgt_len)
-    trainer = Trainer(iters=4)
+    with open("configs/config.yml") as f:
+        cfg = yaml.load(f, Loader=yaml.FullLoader)
+    data = SourceTargetDataset(**cfg["dataset"])
+    model = Transformer(data.voc_src_len, data.voc_tgt_len, **cfg["model"])
 
     #model.load_state_dict(torch.load("mod_checkpoint.pth"))
     model.to(device)
+
+    trainer = Trainer(**cfg["train"])
     trainer.fit(model, data)
     print()
 

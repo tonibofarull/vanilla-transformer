@@ -4,7 +4,6 @@ import torch
 from torch.nn import functional as F
 from torch import optim
 from torch.utils.data import DataLoader
-import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -34,7 +33,7 @@ def compute_and_loss(model, inp, out, inp_pad, out_pad, data):
 
 
 class Trainer:
-    def __init__(self, iters=2, verbose=True, batch_size=128, lr=0.0001, shuffle=True):
+    def __init__(self, iters=2, verbose=True, batch_size=64, lr=0.0001, shuffle=True):
         self.iters = iters
         self.verbose = verbose
         self.batch_size = batch_size

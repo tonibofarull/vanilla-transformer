@@ -1,0 +1,18 @@
+dataset:
+    option: 1
+    max_len: 16
+    max_num_lines: 20000
+
+model:
+    d_model: 128
+    d_ff: 2048
+    drop_p: 0.1
+    Nx: 6
+    h: 8
+
+train:
+    iters: 20
+    batch_size: 64
+    lr: 0.0001
+    shuffle: True
+    verbose: True

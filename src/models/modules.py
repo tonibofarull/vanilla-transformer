@@ -28,7 +28,7 @@ class PositionalEncoding(nn.Module):
     Section 3.5 from original paper
     """
 
-    def __init__(self, d_model, max_seq_len=100):
+    def __init__(self, d_model, max_seq_len=1000):
         super().__init__()
         pe = torch.zeros((max_seq_len, d_model))
         pos = torch.arange(0, max_seq_len).unsqueeze(1)
@@ -52,7 +52,7 @@ class MultiHeadAttention(nn.Module):
     Attention layer and Multi-Head Attention
     """
 
-    def __init__(self, is_mask, d_model, h=8):
+    def __init__(self, is_mask, d_model, h):
         super().__init__()
         self.is_mask = is_mask
 
