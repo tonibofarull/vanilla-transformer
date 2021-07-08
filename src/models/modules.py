@@ -7,7 +7,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class Embedding(nn.Module):
     """
-    Converts input into embedding of correct size.
+    Index of a word to the embedding representation
     """
 
     def __init__(self, voc_len, d_model):
@@ -15,19 +15,11 @@ class Embedding(nn.Module):
         self.table = nn.Embedding(voc_len, d_model)
 
     def forward(self, X):
-        """
-        X:      (N, L)
-        return: (N, L, d_model)
-        """
         X = self.table(X)
         return X
 
 
 class PositionalEncoding(nn.Module):
-    """
-    Section 3.5 from original paper
-    """
-
     def __init__(self, d_model, max_seq_len=1000):
         super().__init__()
         pe = torch.zeros((max_seq_len, d_model))
@@ -35,23 +27,15 @@ class PositionalEncoding(nn.Module):
         val = 10000 ** (torch.arange(0, d_model, 2) / d_model)
         pe[:, 0::2] = torch.sin(pos / val)
         pe[:, 1::2] = torch.cos(pos / val)
-        # to not consider the buffer as a parameter
+        # save buffer in state_dict but not trained by optimizer
         self.register_buffer("pe", pe)
 
     def forward(self, X):
-        """
-        X:      (N, L, d_model)
-        return: (N, L, d_model)
-        """
         X = X + self.pe[: X.shape[1], :]
         return X
 
 
 class MultiHeadAttention(nn.Module):
-    """
-    Attention layer and Multi-Head Attention
-    """
-
     def __init__(self, is_mask, d_model, h):
         super().__init__()
         self.is_mask = is_mask
@@ -64,9 +48,7 @@ class MultiHeadAttention(nn.Module):
 
     def forward(self, Q, K, V, pad):
         """
-        Multi-Head Attention: Section 3.2.2
-
-        :param pad: list containing pading of each element
+        :param pad: list containing the padding of each element of the batch.
         """
         Qs = [proj(Q) for proj in self.fc_q]
         Ks = [proj(K) for proj in self.fc_k]
@@ -78,17 +60,16 @@ class MultiHeadAttention(nn.Module):
 
     def _SDA(self, Q, K, V, pad):
         """
-        Scaled Dot-Product Attention: Section 3.2.1
+        Scaled Dot-Product Attention
         """
         QK = torch.matmul(Q, K.transpose(-1, -2)) / np.sqrt(K.shape[1])
         M = torch.zeros(QK.shape).to(device)
         for i, x in enumerate(pad):
             M[i, :, -x:] = 1
-        if self.is_mask:  # block to see future elements
+        if self.is_mask:  # to predict word i, mask positions j such that j > i
             future_M = torch.ones((QK.shape[1], QK.shape[2])).to(device)
             future_M = torch.triu(future_M, diagonal=1)
             M = torch.maximum(M, future_M)
-        # mask shape: (L, d_model)
         QK += M * (-1e9)
         att = F.softmax(QK, dim=-1)
         X = torch.matmul(att, V)

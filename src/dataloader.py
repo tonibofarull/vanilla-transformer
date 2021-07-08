@@ -17,8 +17,8 @@ class SourceTargetDataset(Dataset):
 
     def load_data(self):
         if self.option == 1:
-            corpus_src = self._read_corpus_tokenized("../data/english_test.txt")
-            corpus_tgt = self._read_corpus_tokenized("../data/spanish_test.txt")
+            corpus_src = self._read_corpus_tokenized("../data/english_toy_test.txt")
+            corpus_tgt = self._read_corpus_tokenized("../data/spanish_toy_test.txt")
         else:
             corpus_src = self._read_corpus_tokenized("../data/spanish_dataset.txt")
             corpus_tgt = self._read_corpus_tokenized("../data/english_dataset.txt")

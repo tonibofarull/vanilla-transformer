@@ -8,6 +8,10 @@ PyTorch implementation of the original transformer paper ([Vaswani et al.](https
 </div>
 <br>
 
+## Dataset
+
+`english_dataset.txt` and `spanish_dataset.txt` are a selection of sentence pairs from the Tatoeba Project. See the repository [Tab-delimited Bilingual Sentence Pairs](http://www.manythings.org/anki). We have preprocessed the words to make them lowercase and remove special characters.
+
 ## TODO
 
 - Learning rate Scheduler: We are using ADAM with a learning rate of 0.0001.

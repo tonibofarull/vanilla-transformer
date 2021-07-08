@@ -9,11 +9,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def compute_and_loss(model, inp, out, inp_pad, out_pad, data):
     # sos and eos shape: (1, 1)
-    c_sos = torch.repeat_interleave(data.sos, out.shape[0], 0)
-    c_pad = torch.repeat_interleave(data.pad, out.shape[0], 0)
-    # sos and eos with shape (N, 1) and same value at every position
-    # Add sos and eos to create input and output of decoder
-    # out shape: (N, 16) => out1 and out2 shape (N, 17)
+    c_sos = data.sos.expand(out.shape[0], -1)
+    c_pad = data.pad.expand(out.shape[0], -1)
     out1 = torch.cat([c_sos, out], 1)
     real = torch.cat([out, c_pad], 1)
     real[range(len(out_pad)), -(out_pad + 1)] = data.eos
