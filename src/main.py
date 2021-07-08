@@ -8,25 +8,26 @@ from train import Trainer
 PICK_TOP = 0
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 def inference(model, inp, inp_pad, data):
     model.eval()
-    sos = data.sos.expand(inp.shape[0], 1)
-    out1 = torch.cat([sos], 1)
+    c_sos = data.sos.expand(1, -1)
+    out = torch.cat([c_sos], 1)
     print("Initial input of the decoder")
-    print(data._idx_to_token(out1))
+    print(data._idx_to_token(out))
     print()
-    for _ in range(data.MAX_LEN * 2):
-        R = model(inp.to(device), out1.to(device), inp_pad, [0])
+    for _ in range(data.max_len * 2):
+        R = model(inp.to(device), out.to(device), inp_pad, [0])
         last_pred = R[0, -1]
         values, indices = torch.topk(last_pred, k=5)
         probs = values.cpu().detach().numpy()
         r = torch.tensor([indices[PICK_TOP]])
-        out1 = torch.cat([out1, r.reshape(1, 1)], 1)
+        out = torch.cat([out, r.reshape(1, 1)], 1)
         print("Top best values:")
         print([(data.voc_tgt[x], p) for x, p in zip(indices, probs)])
         print()
         print("Current output:")
-        print(data._idx_to_token(out1))
+        print(data._idx_to_token(out))
         print("----")
         print()
         if r == data.eos:
@@ -56,7 +57,6 @@ def main():
         print("Ground truth:")
         print(data._idx_to_token(out))
         print()
-
         inference(model, inp, inp_pad, data)
         i += 1
         if i == 5:

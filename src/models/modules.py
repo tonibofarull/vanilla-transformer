@@ -5,6 +5,7 @@ import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 class Embedding(nn.Module):
     """
     Index of a word to the embedding representation
@@ -41,9 +42,9 @@ class MultiHeadAttention(nn.Module):
         self.is_mask = is_mask
 
         d = d_model // h
-        self.fc_q = nn.ModuleList([nn.Linear(d_model, d, bias=False) for _ in range(h)])
-        self.fc_k = nn.ModuleList([nn.Linear(d_model, d, bias=False) for _ in range(h)])
-        self.fc_v = nn.ModuleList([nn.Linear(d_model, d, bias=False) for _ in range(h)])
+        self.fc_q = nn.ModuleList([nn.Linear(d_model, d) for _ in range(h)])
+        self.fc_k = nn.ModuleList([nn.Linear(d_model, d) for _ in range(h)])
+        self.fc_v = nn.ModuleList([nn.Linear(d_model, d) for _ in range(h)])
         self.fc = nn.Linear(d_model, d_model)
 
     def forward(self, Q, K, V, pad):
@@ -66,11 +67,12 @@ class MultiHeadAttention(nn.Module):
         M = torch.zeros(QK.shape).to(device)
         for i, x in enumerate(pad):
             M[i, :, -x:] = 1
+            # M[i, -x:, :] = 1
         if self.is_mask:  # to predict word i, mask positions j such that j > i
             future_M = torch.ones((QK.shape[1], QK.shape[2])).to(device)
             future_M = torch.triu(future_M, diagonal=1)
             M = torch.maximum(M, future_M)
-        QK += M * (-1e9)
+        QK = QK + M * (-1e9)
         att = F.softmax(QK, dim=-1)
         X = torch.matmul(att, V)
         return X

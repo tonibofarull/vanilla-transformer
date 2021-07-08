@@ -61,17 +61,21 @@ class Decoder(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self, voc_src, voc_tgt, d_model=128, d_ff=2048, drop_p=0.1, Nx=6, h=8):
+    def __init__(self, voc_src, voc_tgt, d_model=512, d_ff=2048, drop_p=0.1, Nx=6, h=8):
         super().__init__()
         self.pe = PositionalEncoding(d_model)
 
         self.embedding_src = Embedding(voc_src, d_model)
         self.drop1 = nn.Dropout(drop_p)
-        self.encs = nn.ModuleList([Encoder(d_model, d_ff, drop_p, h) for _ in range(Nx)])
+        self.encs = nn.ModuleList(
+            [Encoder(d_model, d_ff, drop_p, h) for _ in range(Nx)]
+        )
 
         self.embedding_tgt = Embedding(voc_tgt, d_model)
         self.drop2 = nn.Dropout(drop_p)
-        self.decs = nn.ModuleList([Decoder(d_model, d_ff, drop_p, h) for _ in range(Nx)])
+        self.decs = nn.ModuleList(
+            [Decoder(d_model, d_ff, drop_p, h) for _ in range(Nx)]
+        )
 
         self.fc = nn.Linear(d_model, voc_tgt)
 
@@ -83,14 +87,14 @@ class Transformer(nn.Module):
         :return: shape (N, L, voc_tgt)
         """
         # Encoder
-        inp = self.embedding_src(inp)
+        inp = self.embedding_src(inp)  # (N, L1, voc_src)
         inp = self.pe(inp)
         inp = self.drop1(inp)
         for enc in self.encs:
             inp = enc(inp, inp_pad)
 
         # Decoder
-        out = self.embedding_tgt(out)
+        out = self.embedding_tgt(out)  # (N, L1, voc_tgt)
         out = self.pe(out)
         out = self.drop2(out)
         for dec in self.decs:

@@ -10,8 +10,8 @@ class SourceTargetDataset(Dataset):
     SPECIAL_TOKENS = [START_OF_SENTENCE, END_OF_SENTENCE, PADDING]
 
     def __init__(self, max_len, max_num_lines, option):
-        self.MAX_LEN = max_len
-        self.MAX_NUM_LINES = max_num_lines
+        self.max_len = max_len
+        self.max_num_lines = max_num_lines
         self.option = option
         self.load_data()
 
@@ -26,13 +26,12 @@ class SourceTargetDataset(Dataset):
         corpus = list(zip(corpus_src, corpus_tgt))
         lens = np.array([(len(obs_src), len(obs_tgt)) for obs_src, obs_tgt in corpus])
         max_len = np.max(lens, axis=1)
-        corpus = [elem for elem, num in zip(corpus, max_len) if num <= self.MAX_LEN]
+        corpus = [elem for elem, num in zip(corpus, max_len) if num <= self.max_len]
 
         self.corpus_pre = []
         for elem_src, elem_tgt in corpus:
-            # +1 because we are adding 1 extra token in the output
-            inp_pad = self.MAX_LEN - len(elem_src) + 1
-            out_pad = self.MAX_LEN - len(elem_tgt)
+            inp_pad = self.max_len - len(elem_src)
+            out_pad = self.max_len - len(elem_tgt)
             elem_src += [self.PADDING] * inp_pad
             elem_tgt += [self.PADDING] * out_pad
             self.corpus_pre.append((elem_src, elem_tgt, inp_pad, out_pad))
@@ -63,7 +62,7 @@ class SourceTargetDataset(Dataset):
             for x in f:
                 r.append(x.rstrip().split())
                 i += 1
-                if i == self.MAX_NUM_LINES:
+                if i == self.max_num_lines:
                     break
             return r
 
