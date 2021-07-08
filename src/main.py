@@ -1,12 +1,19 @@
 import torch
 from torch.utils.data import DataLoader
+import numpy as np
+import random
 import yaml
 from models.transformer import Transformer
 from dataloader import SourceTargetDataset
 from train import Trainer
 
-PICK_TOP = 0
+torch.manual_seed(4444)
+np.random.seed(4444)
+random.seed(4444)
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+PICK_TOP = 0
 
 
 def inference(model, inp, inp_pad, data):

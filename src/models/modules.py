@@ -37,7 +37,7 @@ class PositionalEncoding(nn.Module):
 
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, is_mask, d_model, h):
+    def __init__(self, d_model, h, is_mask):
         super().__init__()
         self.is_mask = is_mask
 

@@ -1,62 +1,61 @@
-import torch
 import torch.nn.functional as F
 from torch import nn
 from .modules import MultiHeadAttention, PositionalEncoding, Embedding
 
 
+class FeedForward(nn.Module):
+    def __init__(self, d_model, d_ff, drop_p):
+        super().__init__()
+        self.fc1 = nn.Linear(d_model, d_ff)
+        self.fc2 = nn.Linear(d_ff, d_model)
+        self.drop = nn.Dropout(drop_p)
+        self.norm = nn.LayerNorm(d_model)
+
+    def forward(self, X):
+        X1 = F.relu(self.fc1(X))
+        X1 = self.fc2(X1)
+        X1 = self.drop(X1)
+        X = self.norm(X + X1)
+        return X
+
+
+class Block(nn.Module):
+    def __init__(self, d_model, h, drop_p, is_mask):
+        super().__init__()
+        self.mha = MultiHeadAttention(d_model=d_model, h=h, is_mask=is_mask)
+        self.drop = nn.Dropout(drop_p)
+        self.norm = nn.LayerNorm(d_model)
+
+    def forward(self, Q, K, V, pad):
+        X = self.mha(Q, K, V, pad)
+        X = self.drop(X)
+        X = self.norm(Q + X)
+        return X
+
+
 class Encoder(nn.Module):
     def __init__(self, d_model, d_ff, drop_p, h):
         super().__init__()
-        self.mha = MultiHeadAttention(is_mask=False, d_model=d_model, h=h)
-        self.drop1 = nn.Dropout(drop_p)
-        self.batch_norm1 = nn.LayerNorm(d_model)
-
-        self.fc1 = nn.Linear(d_model, d_ff)
-        self.fc2 = nn.Linear(d_ff, d_model)
-        self.drop2 = nn.Dropout(drop_p)
-        self.batch_norm2 = nn.LayerNorm(d_model)
+        self.block = Block(d_model, h, drop_p, is_mask=False)
+        self.ff = FeedForward(d_model, d_ff, drop_p)
 
     def forward(self, X, pad):
-        X1 = self.mha(X, X, X, pad)
-        X1 = self.drop1(X1)
-        X = self.batch_norm1(X + X1)
-
-        X1 = F.relu(self.fc1(X))
-        X1 = self.fc2(X1)
-        X1 = self.drop2(X1)
-        X = self.batch_norm2(X + X1)
+        X = self.block(X, X, X, pad)
+        X = self.ff(X)
         return X
 
 
 class Decoder(nn.Module):
     def __init__(self, d_model, d_ff, drop_p, h):
         super().__init__()
-        self.mha1 = MultiHeadAttention(is_mask=True, d_model=d_model, h=h)
-        self.drop1 = nn.Dropout(drop_p)
-        self.batch_norm1 = nn.LayerNorm(d_model)
-
-        self.mha2 = MultiHeadAttention(is_mask=True, d_model=d_model, h=h)
-        self.drop2 = nn.Dropout(drop_p)
-        self.batch_norm2 = nn.LayerNorm(d_model)
-
-        self.fc1 = nn.Linear(d_model, d_ff)
-        self.fc2 = nn.Linear(d_ff, d_model)
-        self.drop3 = nn.Dropout(drop_p)
-        self.batch_norm3 = nn.LayerNorm(d_model)
+        self.block1 = Block(d_model, h, drop_p, is_mask=True)
+        self.block2 = Block(d_model, h, drop_p, is_mask=True)
+        self.ff = FeedForward(d_model, d_ff, drop_p)
 
     def forward(self, X, Y, pad):
-        Y1 = self.mha1(Y, Y, Y, pad)
-        Y1 = self.drop1(Y1)
-        Y = self.batch_norm1(Y + Y1)
-
-        Y1 = self.mha2(Y, X, X, pad)
-        Y1 = self.drop2(Y1)
-        Y = self.batch_norm2(Y + Y1)
-
-        Y1 = F.relu(self.fc1(Y))
-        Y1 = self.fc2(Y1)
-        Y1 = self.drop3(Y1)
-        Y = self.batch_norm3(Y + Y1)
+        Y = self.block1(Y, Y, Y, pad)
+        Y = self.block2(Y, X, X, pad)
+        Y = self.ff(Y)
         return Y
 
 
