@@ -28,7 +28,7 @@ def compute_and_loss(model, inp, out, inp_pad, out_pad, data, label_smooth):
         # bithack to apply soft labeling (label smoothing)
         # 'label_smooth' = 0 => regular classification
         t_oe = t_oe * (1 - label_smooth) + (1 - t_oe) * label_smooth / scale
-        J += F.binary_cross_entropy(p_oe.to(device), t_oe.to(device)) / scale
+        J += F.binary_cross_entropy(p_oe.to(device), t_oe.to(device))
     return J / N
 
 

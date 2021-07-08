@@ -38,12 +38,12 @@ class SourceTargetDataset(Dataset):
 
         sentences = [elem for elem, _, _, _ in self.corpus_pre]
         self.voc_src = self.SPECIAL_TOKENS.copy()
-        self.voc_src += list(set(x for snts in sentences for x in snts if x not in self.SPECIAL_TOKENS))
+        self.voc_src += sorted(set(x for snts in sentences for x in snts if x not in self.SPECIAL_TOKENS))
         self.voc_src_map = dict({voc: i for i, voc in enumerate(self.voc_src)})
 
         sentences = [elem for _, elem, _, _ in self.corpus_pre]
         self.voc_tgt = self.SPECIAL_TOKENS.copy()
-        self.voc_tgt += list(set(x for snts in sentences for x in snts if x not in self.SPECIAL_TOKENS))
+        self.voc_tgt += sorted(set(x for snts in sentences for x in snts if x not in self.SPECIAL_TOKENS))
         self.voc_tgt_map = dict({voc: i for i, voc in enumerate(self.voc_tgt)})
 
         self.sos = self._token_to_idx([self.START_OF_SENTENCE], False).unsqueeze(1)
