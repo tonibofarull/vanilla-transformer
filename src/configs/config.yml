@@ -4,15 +4,16 @@ dataset:
     max_num_lines: 20000
 
 model:
-    d_model: 128
+    d_model: 64
     d_ff: 2048
-    drop_p: 0.1
+    drop_p: 0
     Nx: 6
     h: 8
 
 train:
-    iters: 20
+    iters: 100
     batch_size: 64
     lr: 0.0001
+    soft_label: False
     shuffle: True
     verbose: True

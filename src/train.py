@@ -7,7 +7,8 @@ from torch.utils.data import DataLoader
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def compute_and_loss(model, inp, out, inp_pad, out_pad, data):
+
+def compute_and_loss(model, inp, out, inp_pad, out_pad, data, soft_label):
     # sos and eos shape: (1, 1)
     c_sos = data.sos.expand(out.shape[0], -1)
     c_pad = data.pad.expand(out.shape[0], -1)
@@ -22,19 +23,28 @@ def compute_and_loss(model, inp, out, inp_pad, out_pad, data):
         scale = real.shape[1] - out_pad[i]
         r_oe = real[i, :scale]
         p_oe = pred[i, :scale]
-        # bithack to apply softlabeling
-        max_p = 0.99
-        r_oe = r_oe * max_p + (1 - r_oe) * (1 - max_p) / r_oe.shape[1]
+        if soft_label:  # bithack to apply softlabeling
+            max_p = 0.99
+            r_oe = r_oe * max_p + (1 - r_oe) * (1 - max_p) / r_oe.shape[1]
         r += F.binary_cross_entropy(p_oe.to(device), r_oe.to(device)) / scale
     return r
 
 
 class Trainer:
-    def __init__(self, iters=2, verbose=True, batch_size=64, lr=0.0001, shuffle=True):
+    def __init__(
+        self,
+        iters=2,
+        verbose=True,
+        batch_size=64,
+        lr=0.0001,
+        soft_label=False,
+        shuffle=True,
+    ):
         self.iters = iters
         self.verbose = verbose
         self.batch_size = batch_size
         self.lr = lr
+        self.soft_label = soft_label
         self.shuffle = shuffle
 
     def fit(self, model, data):
@@ -51,7 +61,9 @@ class Trainer:
             for i, batch in enumerate(trainloader):
                 optimizer.zero_grad()
                 inp, out, inp_pad, out_pad, _, _ = batch
-                train_loss = compute_and_loss(model, inp, out, inp_pad, out_pad, data)
+                train_loss = compute_and_loss(
+                    model, inp, out, inp_pad, out_pad, data, self.soft_label
+                )
                 train_loss.backward()
                 optimizer.step()
 

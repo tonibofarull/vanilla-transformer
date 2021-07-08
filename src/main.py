@@ -10,7 +10,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def inference(model, inp, inp_pad, data):
     model.eval()
-    sos = torch.repeat_interleave(data.sos, 1, 0)
+    sos = data.sos.expand(inp.shape[0], 1)
     out1 = torch.cat([sos], 1)
     print("Initial input of the decoder")
     print(data._idx_to_token(out1))
@@ -39,7 +39,7 @@ def main():
     data = SourceTargetDataset(**cfg["dataset"])
     model = Transformer(data.voc_src_len, data.voc_tgt_len, **cfg["model"])
 
-    #model.load_state_dict(torch.load("mod_checkpoint.pth"))
+    # model.load_state_dict(torch.load("mod_checkpoint.pth"))
     model.to(device)
 
     trainer = Trainer(**cfg["train"])
