@@ -5,15 +5,16 @@ dataset:
 
 model:
     d_model: 64
-    d_ff: 2048
+    d_ff: 128
     Nx: 6
     h: 8
-    drop_p: 0
+    drop_p: 0.1
+    postLN: False
 
 train:
-    iters: 20
-    batch_size: 1
-    lr: 0.0001
-    label_smooth: 0.1
+    iters: 50
+    batch_size: 64
+    lr: 0.001
+    label_smooth: 0
     shuffle: True
     verbose: True
